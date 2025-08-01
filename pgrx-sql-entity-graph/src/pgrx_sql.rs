@@ -29,6 +29,7 @@ use crate::aggregate::entity::PgAggregateEntity;
 use crate::control_file::ControlFile;
 use crate::extension_sql::entity::{ExtensionSqlEntity, SqlDeclaredEntity};
 use crate::extension_sql::SqlDeclared;
+use crate::pg_event_trigger::entity::PgEventTriggerEntity;
 use crate::pg_extern::entity::PgExternEntity;
 use crate::pg_trigger::entity::PgTriggerEntity;
 use crate::positioning_ref::PositioningRef;
@@ -78,6 +79,7 @@ pub struct PgrxSql {
     pub hashes: HashMap<PostgresHashEntity, NodeIndex>,
     pub aggregates: HashMap<PgAggregateEntity, NodeIndex>,
     pub triggers: HashMap<PgTriggerEntity, NodeIndex>,
+    pub event_triggers: HashMap<PgEventTriggerEntity, NodeIndex>,
     pub extension_name: String,
     pub versioned_so: bool,
 }
@@ -103,6 +105,7 @@ impl PgrxSql {
         let mut hashes: Vec<PostgresHashEntity> = Vec::default();
         let mut aggregates: Vec<PgAggregateEntity> = Vec::default();
         let mut triggers: Vec<PgTriggerEntity> = Vec::default();
+        let mut event_triggers: Vec<PgEventTriggerEntity> = Vec::default();
         for entity in entities {
             match entity {
                 SqlGraphEntity::ExtensionRoot(input_control) => {
@@ -135,6 +138,9 @@ impl PgrxSql {
                 }
                 SqlGraphEntity::Trigger(input_trigger) => {
                     triggers.push(input_trigger);
+                }
+                SqlGraphEntity::EventTrigger(input_event_trigger) => {
+                    event_triggers.push(input_event_trigger);
                 }
             }
         }
@@ -177,6 +183,8 @@ impl PgrxSql {
             &mapped_types,
         )?;
         let mapped_triggers = initialize_triggers(&mut graph, root, bootstrap, finalize, triggers)?;
+        let mapped_event_triggers =
+            initialize_event_triggers(&mut graph, root, bootstrap, finalize, event_triggers)?;
 
         // Now we can circle back and build up the edge sets.
         connect_schemas(&mut graph, &mapped_schemas, root);
@@ -228,6 +236,7 @@ impl PgrxSql {
             &mapped_externs,
         )?;
         connect_triggers(&mut graph, &mapped_triggers, &mapped_schemas);
+        connect_event_triggers(&mut graph, &mapped_event_triggers, &mapped_schemas);
 
         let this = Self {
             control,
@@ -241,6 +250,7 @@ impl PgrxSql {
             hashes: mapped_hashes,
             aggregates: mapped_aggregates,
             triggers: mapped_triggers,
+            event_triggers: mapped_event_triggers,
             graph,
             graph_root: root,
             graph_bootstrap: bootstrap,
@@ -364,6 +374,9 @@ impl PgrxSql {
                         "label = \"{dot_id}\", penwidth = 0, style = \"filled\", fillcolor = \"#FFE4E0\", weight = 5, shape = \"diamond\""
                     ),
                     SqlGraphEntity::Trigger(_item) => format!(
+                        "label = \"{dot_id}\", penwidth = 0, style = \"filled\", fillcolor = \"#FFE4E0\", weight = 5, shape = \"diamond\""
+                    ),
+                    SqlGraphEntity::EventTrigger(_item) => format!(
                         "label = \"{dot_id}\", penwidth = 0, style = \"filled\", fillcolor = \"#FFE4E0\", weight = 5, shape = \"diamond\""
                     ),
                     SqlGraphEntity::CustomSql(_item) => format!(
@@ -1347,6 +1360,41 @@ fn connect_triggers(
         make_schema_connection(
             graph,
             "Trigger",
+            index,
+            &item.rust_identifier(),
+            item.module_path,
+            schemas,
+        );
+    }
+}
+
+fn initialize_event_triggers(
+    graph: &mut StableGraph<SqlGraphEntity, SqlGraphRequires>,
+    root: NodeIndex,
+    bootstrap: Option<NodeIndex>,
+    finalize: Option<NodeIndex>,
+    event_triggers: Vec<PgEventTriggerEntity>,
+) -> eyre::Result<HashMap<PgEventTriggerEntity, NodeIndex>> {
+    let mut mapped_event_triggers = HashMap::default();
+    for item in event_triggers {
+        let entity: SqlGraphEntity = item.clone().into();
+        let index = graph.add_node(entity);
+
+        mapped_event_triggers.insert(item, index);
+        build_base_edges(graph, index, root, bootstrap, finalize);
+    }
+    Ok(mapped_event_triggers)
+}
+
+fn connect_event_triggers(
+    graph: &mut StableGraph<SqlGraphEntity, SqlGraphRequires>,
+    event_triggers: &HashMap<PgEventTriggerEntity, NodeIndex>,
+    schemas: &HashMap<SchemaEntity, NodeIndex>,
+) {
+    for (item, &index) in event_triggers {
+        make_schema_connection(
+            graph,
+            "Event Trigger",
             index,
             &item.rust_identifier(),
             item.module_path,

@@ -25,6 +25,8 @@ pub use extension_sql::entity::{ExtensionSqlEntity, SqlDeclaredEntity};
 pub use extension_sql::{ExtensionSql, ExtensionSqlFile, SqlDeclared};
 pub use extern_args::{parse_extern_attributes, ExternArgs};
 pub use mapping::RustSqlMapping;
+pub use pg_event_trigger::PgEventTrigger;
+pub use pg_event_trigger::entity::PgEventTriggerEntity;
 pub use pg_extern::entity::{
     PgCastEntity, PgExternArgumentEntity, PgExternEntity, PgExternReturnEntity,
     PgExternReturnEntityIteratedItem, PgOperatorEntity,
@@ -61,6 +63,7 @@ pub(crate) mod fmt;
 pub mod lifetimes;
 pub(crate) mod mapping;
 pub mod metadata;
+pub(crate) mod pg_event_trigger;
 pub(crate) mod pg_extern;
 pub(crate) mod pg_trigger;
 pub(crate) mod pgrx_attribute;
@@ -110,6 +113,7 @@ pub enum SqlGraphEntity {
     Hash(PostgresHashEntity),
     Aggregate(PgAggregateEntity),
     Trigger(PgTriggerEntity),
+    EventTrigger(PgEventTriggerEntity),
 }
 
 impl SqlGraphEntity {
@@ -169,6 +173,7 @@ impl SqlGraphIdentifier for SqlGraphEntity {
             SqlGraphEntity::Aggregate(item) => item.dot_identifier(),
             SqlGraphEntity::Trigger(item) => item.dot_identifier(),
             SqlGraphEntity::ExtensionRoot(item) => item.dot_identifier(),
+            SqlGraphEntity::EventTrigger(item) => item.dot_identifier(),
         }
     }
 
@@ -185,6 +190,7 @@ impl SqlGraphIdentifier for SqlGraphEntity {
             SqlGraphEntity::Aggregate(item) => item.rust_identifier(),
             SqlGraphEntity::Trigger(item) => item.rust_identifier(),
             SqlGraphEntity::ExtensionRoot(item) => item.rust_identifier(),
+            SqlGraphEntity::EventTrigger(item) => item.rust_identifier(),
         }
     }
 
@@ -201,6 +207,7 @@ impl SqlGraphIdentifier for SqlGraphEntity {
             SqlGraphEntity::Aggregate(item) => item.file(),
             SqlGraphEntity::Trigger(item) => item.file(),
             SqlGraphEntity::ExtensionRoot(item) => item.file(),
+            SqlGraphEntity::EventTrigger(item) => item.file(),
         }
     }
 
@@ -217,6 +224,7 @@ impl SqlGraphIdentifier for SqlGraphEntity {
             SqlGraphEntity::Aggregate(item) => item.line(),
             SqlGraphEntity::Trigger(item) => item.line(),
             SqlGraphEntity::ExtensionRoot(item) => item.line(),
+            SqlGraphEntity::EventTrigger(item) => item.line(),
         }
     }
 }
@@ -292,6 +300,9 @@ impl ToSql for SqlGraphEntity {
                 item.to_sql_config.to_sql(self, context).unwrap_or_else(|| item.to_sql(context))
             }
             SqlGraphEntity::ExtensionRoot(item) => item.to_sql(context),
+            SqlGraphEntity::EventTrigger(item) => {
+                item.to_sql_config.to_sql(self, context).unwrap_or_else(|| item.to_sql(context))
+            }
         }
     }
 }

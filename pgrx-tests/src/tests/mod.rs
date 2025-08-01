@@ -25,6 +25,7 @@ mod datetime_tests;
 mod default_arg_value_tests;
 mod derive_pgtype_lifetimes;
 mod enum_type_tests;
+mod event_trigger_tests;
 mod fcinfo_tests;
 mod fn_call_tests;
 mod from_into_datum_tests;

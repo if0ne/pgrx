@@ -16,7 +16,7 @@ use std::ffi::CString;
 use proc_macro2::Ident;
 use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, Attribute, Data, DeriveInput, Item, ItemImpl};
+use syn::{parse_macro_input, Attribute, Data, DeriveInput, Item, ItemFn, ItemImpl};
 
 use operators::{deriving_postgres_eq, deriving_postgres_hash, deriving_postgres_ord};
 use pgrx_sql_entity_graph as sql_gen;
@@ -1417,4 +1417,21 @@ pub fn pg_trigger(attrs: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     wrapped(attrs, input).unwrap_or_else(|e| e.into_compile_error().into())
+}
+
+/**
+
+*/
+#[proc_macro_attribute]
+pub fn pg_event_trigger(_attrs: TokenStream, input: TokenStream) -> TokenStream {
+    fn wrapped(item_impl: ItemFn) -> Result<TokenStream, syn::Error> {
+        use pgrx_sql_entity_graph::PgEventTrigger;
+
+        let sql_graph_entity_item = PgEventTrigger::new(item_impl)?;
+
+        Ok(sql_graph_entity_item.to_token_stream().into())
+    }
+
+    let parsed_base = parse_macro_input!(input as syn::ItemFn);
+    wrapped(parsed_base).unwrap_or_else(|e| e.into_compile_error().into())
 }

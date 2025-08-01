@@ -41,8 +41,10 @@ pub mod atomics;
 pub mod bgworkers;
 pub mod callbacks;
 pub mod callconv;
+pub mod command_tag;
 pub mod datum;
 pub mod enum_helper;
+pub mod event_trigger;
 pub mod fcinfo;
 pub mod ffi;
 pub mod fn_call;
@@ -87,11 +89,13 @@ mod toast;
 pub use aggregate::*;
 pub use atomics::*;
 pub use callbacks::*;
+pub use command_tag::*;
 pub use datum::{
     numeric, AnyArray, AnyElement, AnyNumeric, Array, FromDatum, Inet, Internal, IntoDatum, Json,
     JsonB, Numeric, Range, Uuid, VariadicArray,
 };
 pub use enum_helper::*;
+pub use event_trigger::*;
 pub use fcinfo::*;
 pub use guc::*;
 #[cfg(feature = "cshim")]
